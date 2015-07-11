@@ -21,6 +21,8 @@
 *********************************************************************************************************
 */
 
+#define _TEST_GIT_
+
 #ifndef  OS_MASTER_FILE
 #include <ucos_ii.h>
 #endif
@@ -243,7 +245,7 @@ OS_FLAG_GRP  *OSFlagCreate (OS_FLAGS flags, INT8U *perr)
     }
     return (pgrp);                                  /* Return pointer to event flag group              */
 }
-
+_TEST_GIT_
 /*$PAGE*/
 /*
 *********************************************************************************************************
@@ -313,6 +315,10 @@ OS_FLAG_GRP  *OSFlagDel (OS_FLAG_GRP *pgrp, INT8U opt, INT8U *perr)
     OS_ENTER_CRITICAL();
     if (pgrp->OSFlagWaitList != (void *)0) {               /* See if any tasks waiting on event flags  */
         tasks_waiting = OS_TRUE;                           /* Yes                                      */
+
+_TEST_GIT_
+
+
     } else {
         tasks_waiting = OS_FALSE;                          /* No                                       */
     }

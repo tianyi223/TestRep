@@ -35,6 +35,8 @@
 static  void     OS_FlagBlock(OS_FLAG_GRP *pgrp, OS_FLAG_NODE *pnode, OS_FLAGS flags, INT8U wait_type, INT16U timeout);
 static  BOOLEAN  OS_FlagTaskRdy(OS_FLAG_NODE *pnode, OS_FLAGS flags_rdy);
 
+_TEST_GIT_
+
 /*$PAGE*/
 /*
 *********************************************************************************************************
@@ -184,6 +186,8 @@ OS_FLAGS  OSFlagAccept (OS_FLAG_GRP *pgrp, OS_FLAGS flags, INT8U wait_type, INT8
 }
 #endif
 
+_TEST_GIT_
+
 /*$PAGE*/
 /*
 *********************************************************************************************************
@@ -291,7 +295,7 @@ OS_FLAG_GRP  *OSFlagDel (OS_FLAG_GRP *pgrp, INT8U opt, INT8U *perr)
     OS_CPU_SR     cpu_sr = 0;
 #endif
 
-
+_TEST_GIT_
 
 #if OS_ARG_CHK_EN > 0
     if (perr == (INT8U *)0) {                              /* Validate 'perr'                          */
