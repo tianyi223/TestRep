@@ -71,12 +71,12 @@ _TEST_GIT_
 *                                  XXXXX_WAIT_SET_ANY + XXXXX_CONSUME
 *
 *              perr          is a pointer to an error code and can be:
-*                            OS_ERR_NONE               No error
-*                            OS_ERR_EVENT_TYPE         You are not pointing to an event flag group
-*                            OS_ERR_FLAG_WAIT_TYPE     You didn't specify a proper 'wait_type' argument.
-*                            OS_ERR_FLAG_INVALID_PGRP  You passed a NULL pointer instead of the event flag
+*                            TEST_GIT_OS_ERR_NONE               No error
+*                            TEST_GIT_OS_ERR_EVENT_TYPE         You are not pointing to an event flag group
+*                            TEST_GIT_OS_ERR_FLAG_WAIT_TYPE     You didn't specify a proper 'wait_type' argument.
+*                            TEST_GIT_OS_ERR_FLAG_INVALID_PGRP  You passed a NULL pointer instead of the event flag
 *                                                      group handle.
-*                            OS_ERR_FLAG_NOT_RDY       The desired flags you are waiting for are not
+*                            TEST_GIT_OS_ERR_FLAG_NOT_RDY       The desired flags you are waiting for are not
 *                                                      available.
 *
 * Returns    : The flags in the event flag group that made the task ready or, 0 if a timeout or an error
@@ -107,12 +107,12 @@ XXXXXS  OSFlagAccept (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT8U *per
         return ((XXXXXS)0);
     }
     if (pgrp == (XXXXX_GRP *)0) {                        /* Validate 'pgrp'                          */
-        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
         return ((XXXXXS)0);
     }
 #endif
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {          /* Validate event block type                */
-        *perr = OS_ERR_EVENT_TYPE;
+        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
         return ((XXXXXS)0);
     }
     result = (INT8U)(wait_type & XXXXX_CONSUME);
@@ -123,7 +123,7 @@ XXXXXS  OSFlagAccept (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT8U *per
         consume    = OS_FALSE;
     }
 /*$PAGE*/
-    *perr = OS_ERR_NONE;                                   /* Assume NO error until proven otherwise.  */
+    *perr = TEST_GIT_OS_ERR_NONE;                                   /* Assume NO error until proven otherwise.  */
     OS_ENTER_CRITICAL();
     switch (wait_type) {
         case XXXXX_WAIT_SET_ALL:                         /* See if all required flags are set        */
@@ -133,7 +133,7 @@ XXXXXS  OSFlagAccept (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT8U *per
                      pgrp->OSFlagFlags &= ~flags_rdy;      /* Clear ONLY the flags that we wanted      */
                  }
              } else {
-                 *perr = OS_ERR_FLAG_NOT_RDY;
+                 *perr = TEST_GIT_OS_ERR_FLAG_NOT_RDY;
              }
              OS_EXIT_CRITICAL();
              break;
@@ -145,7 +145,7 @@ XXXXXS  OSFlagAccept (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT8U *per
                      pgrp->OSFlagFlags &= ~flags_rdy;      /* Clear ONLY the flags that we got         */
                  }
              } else {
-                 *perr = OS_ERR_FLAG_NOT_RDY;
+                 *perr = TEST_GIT_OS_ERR_FLAG_NOT_RDY;
              }
              OS_EXIT_CRITICAL();
              break;
@@ -158,7 +158,7 @@ XXXXXS  OSFlagAccept (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT8U *per
                      pgrp->OSFlagFlags |= flags_rdy;       /* Set ONLY the flags that we wanted        */
                  }
              } else {
-                 *perr = OS_ERR_FLAG_NOT_RDY;
+                 *perr = TEST_GIT_OS_ERR_FLAG_NOT_RDY;
              }
              OS_EXIT_CRITICAL();
              break;
@@ -170,7 +170,7 @@ XXXXXS  OSFlagAccept (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT8U *per
                      pgrp->OSFlagFlags |= flags_rdy;       /* Set ONLY the flags that we got           */
                  }
              } else {
-                 *perr = OS_ERR_FLAG_NOT_RDY;
+                 *perr = TEST_GIT_OS_ERR_FLAG_NOT_RDY;
              }
              OS_EXIT_CRITICAL();
              break;
@@ -179,7 +179,7 @@ XXXXXS  OSFlagAccept (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT8U *per
         default:
              OS_EXIT_CRITICAL();
              flags_rdy = (XXXXXS)0;
-             *perr     = OS_ERR_FLAG_WAIT_TYPE;
+             *perr     = TEST_GIT_OS_ERR_FLAG_WAIT_TYPE;
              break;
     }
     return (flags_rdy);
@@ -198,10 +198,10 @@ _TEST_GIT_
 * Arguments  : flags         Contains the initial value to store in the event flag group.
 *
 *              perr          is a pointer to an error code which will be returned to your application:
-*                               OS_ERR_NONE               if the call was successful.
-*                               OS_ERR_CREATE_ISR         if you attempted to create an Event Flag from an
+*                               TEST_GIT_OS_ERR_NONE               if the call was successful.
+*                               TEST_GIT_OS_ERR_CREATE_ISR         if you attempted to create an Event Flag from an
 *                                                         ISR.
-*                               OS_ERR_FLAG_GRP_DEPLETED  if there are no more event flag groups
+*                               TEST_GIT_OS_ERR_FLAG_GRP_DEPLETED  if there are no more event flag groups
 *
 * Returns    : A pointer to an event flag group or a NULL pointer if no more groups are available.
 *
@@ -224,7 +224,7 @@ XXXXX_GRP  *OSFlagCreate (XXXXXS flags, INT8U *perr)
     }
 #endif
     if (OSIntNesting > 0) {                         /* See if called from ISR ...                      */
-        *perr = OS_ERR_CREATE_ISR;                  /* ... can't CREATE from an ISR                    */
+        *perr = TEST_GIT_OS_ERR_CREATE_ISR;                  /* ... can't CREATE from an ISR                    */
         return ((XXXXX_GRP *)0);
     }
     OS_ENTER_CRITICAL();
@@ -240,10 +240,10 @@ XXXXX_GRP  *OSFlagCreate (XXXXXS flags, INT8U *perr)
         pgrp->OSFlagName[1]  = OS_ASCII_NUL;
 #endif
         OS_EXIT_CRITICAL();
-        *perr                = OS_ERR_NONE;
+        *perr                = TEST_GIT_OS_ERR_NONE;
     } else {
         OS_EXIT_CRITICAL();
-        *perr                = OS_ERR_FLAG_GRP_DEPLETED;
+        *perr                = TEST_GIT_OS_ERR_FLAG_GRP_DEPLETED;
     }
     return (pgrp);                                  /* Return pointer to event flag group              */
 }
@@ -265,14 +265,14 @@ XXXXX_GRP  *OSFlagCreate (XXXXXS flags, INT8U *perr)
 *                                                    readied.
 *
 *              perr          is a pointer to an error code that can contain one of the following values:
-*                            OS_ERR_NONE               The call was successful and the event flag group was
+*                            TEST_GIT_OS_ERR_NONE               The call was successful and the event flag group was
 *                                                      deleted
-*                            OS_ERR_DEL_ISR            If you attempted to delete the event flag group from
+*                            TEST_GIT_OS_ERR_DEL_ISR            If you attempted to delete the event flag group from
 *                                                      an ISR
-*                            OS_ERR_FLAG_INVALID_PGRP  If 'pgrp' is a NULL pointer.
-*                            OS_ERR_EVENT_TYPE         If you didn't pass a pointer to an event flag group
-*                            OS_ERR_INVALID_OPT        An invalid option was specified
-*                            OS_ERR_TASK_WAITING       One or more tasks were waiting on the event flag
+*                            TEST_GIT_OS_ERR_FLAG_INVALID_PGRP  If 'pgrp' is a NULL pointer.
+*                            TEST_GIT_OS_ERR_EVENT_TYPE         If you didn't pass a pointer to an event flag group
+*                            TEST_GIT_OS_ERR_INVALID_OPT        An invalid option was specified
+*                            TEST_GIT_OS_ERR_TASK_WAITING       One or more tasks were waiting on the event flag
 *                                                      group.
 *
 * Returns    : pgrp          upon error
@@ -302,16 +302,16 @@ _TEST_GIT_
         return (pgrp);
     }
     if (pgrp == (XXXXX_GRP *)0) {                        /* Validate 'pgrp'                          */
-        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
         return (pgrp);
     }
 #endif
     if (OSIntNesting > 0) {                                /* See if called from ISR ...               */
-        *perr = OS_ERR_DEL_ISR;                            /* ... can't DELETE from an ISR             */
+        *perr = TEST_GIT_OS_ERR_DEL_ISR;                            /* ... can't DELETE from an ISR             */
         return (pgrp);
     }
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {          /* Validate event group type                */
-        *perr = OS_ERR_EVENT_TYPE;
+        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
         return (pgrp);
     }
     OS_ENTER_CRITICAL();
@@ -332,11 +332,11 @@ _TEST_GIT_
                  pgrp->OSFlagFlags    = (XXXXXS)0;
                  OSFlagFreeList       = pgrp;
                  OS_EXIT_CRITICAL();
-                 *perr                = OS_ERR_NONE;
+                 *perr                = TEST_GIT_OS_ERR_NONE;
                  pgrp_return          = (XXXXX_GRP *)0;  /* Event Flag Group has been deleted        */
              } else {
                  OS_EXIT_CRITICAL();
-                 *perr                = OS_ERR_TASK_WAITING;
+                 *perr                = TEST_GIT_OS_ERR_TASK_WAITING;
                  pgrp_return          = pgrp;
              }
              break;
@@ -359,13 +359,13 @@ _TEST_GIT_
              if (tasks_waiting == OS_TRUE) {               /* Reschedule only if task(s) were waiting  */
                  OS_Sched();                               /* Find highest priority task ready to run  */
              }
-             *perr = OS_ERR_NONE;
+             *perr = TEST_GIT_OS_ERR_NONE;
              pgrp_return          = (XXXXX_GRP *)0;      /* Event Flag Group has been deleted        */
              break;
 
         default:
              OS_EXIT_CRITICAL();
-             *perr                = OS_ERR_INVALID_OPT;
+             *perr                = TEST_GIT_OS_ERR_INVALID_OPT;
              pgrp_return          = pgrp;
              break;
     }
@@ -386,11 +386,11 @@ _TEST_GIT_
 *
 *              perr      is a pointer to an error code that can contain one of the following values:
 *
-*                        OS_ERR_NONE                if the requested task is resumed
-*                        OS_ERR_EVENT_TYPE          if 'pevent' is not pointing to an event flag group
-*                        OS_ERR_PNAME_NULL          You passed a NULL pointer for 'pname'
-*                        OS_ERR_FLAG_INVALID_PGRP   if you passed a NULL pointer for 'pgrp'
-*                        OS_ERR_NAME_GET_ISR        if you called this function from an ISR
+*                        TEST_GIT_OS_ERR_NONE                if the requested task is resumed
+*                        TEST_GIT_OS_ERR_EVENT_TYPE          if 'pevent' is not pointing to an event flag group
+*                        TEST_GIT_OS_ERR_PNAME_NULL          You passed a NULL pointer for 'pname'
+*                        TEST_GIT_OS_ERR_FLAG_INVALID_PGRP   if you passed a NULL pointer for 'pgrp'
+*                        TEST_GIT_OS_ERR_NAME_GET_ISR        if you called this function from an ISR
 *
 * Returns    : The length of the string or 0 if the 'pgrp' is a NULL pointer.
 *********************************************************************************************************
@@ -411,27 +411,27 @@ INT8U  OSFlagNameGet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
         return (0);
     }
     if (pgrp == (XXXXX_GRP *)0) {              /* Is 'pgrp' a NULL pointer?                          */
-        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
         return (0);
     }
     if (pname == (INT8U *)0) {                   /* Is 'pname' a NULL pointer?                         */
-        *perr = OS_ERR_PNAME_NULL;
+        *perr = TEST_GIT_OS_ERR_PNAME_NULL;
         return (0);
     }
 #endif
     if (OSIntNesting > 0) {                      /* See if trying to call from an ISR                  */
-        *perr = OS_ERR_NAME_GET_ISR;
+        *perr = TEST_GIT_OS_ERR_NAME_GET_ISR;
         return (0);
     }
     OS_ENTER_CRITICAL();
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {
         OS_EXIT_CRITICAL();
-        *perr = OS_ERR_EVENT_TYPE;
+        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
         return (0);
     }
     len   = OS_StrCopy(pname, pgrp->OSFlagName); /* Copy name from XXXXX_GRP                         */
     OS_EXIT_CRITICAL();
-    *perr = OS_ERR_NONE;
+    *perr = TEST_GIT_OS_ERR_NONE;
     return (len);
 }
 #endif
@@ -450,11 +450,11 @@ INT8U  OSFlagNameGet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
 *
 *              perr      is a pointer to an error code that can contain one of the following values:
 *
-*                        OS_ERR_NONE                if the requested task is resumed
-*                        OS_ERR_EVENT_TYPE          if 'pevent' is not pointing to an event flag group
-*                        OS_ERR_PNAME_NULL          You passed a NULL pointer for 'pname'
-*                        OS_ERR_FLAG_INVALID_PGRP   if you passed a NULL pointer for 'pgrp'
-*                        OS_ERR_NAME_SET_ISR        if you called this function from an ISR
+*                        TEST_GIT_OS_ERR_NONE                if the requested task is resumed
+*                        TEST_GIT_OS_ERR_EVENT_TYPE          if 'pevent' is not pointing to an event flag group
+*                        TEST_GIT_OS_ERR_PNAME_NULL          You passed a NULL pointer for 'pname'
+*                        TEST_GIT_OS_ERR_FLAG_INVALID_PGRP   if you passed a NULL pointer for 'pgrp'
+*                        TEST_GIT_OS_ERR_NAME_SET_ISR        if you called this function from an ISR
 *
 * Returns    : None
 *********************************************************************************************************
@@ -475,33 +475,33 @@ void  OSFlagNameSet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
         return;
     }
     if (pgrp == (XXXXX_GRP *)0) {              /* Is 'pgrp' a NULL pointer?                          */
-        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
         return;
     }
     if (pname == (INT8U *)0) {                   /* Is 'pname' a NULL pointer?                         */
-        *perr = OS_ERR_PNAME_NULL;
+        *perr = TEST_GIT_OS_ERR_PNAME_NULL;
         return;
     }
 #endif
     if (OSIntNesting > 0) {                      /* See if trying to call from an ISR                  */
-        *perr = OS_ERR_NAME_SET_ISR;
+        *perr = TEST_GIT_OS_ERR_NAME_SET_ISR;
         return;
     }
     OS_ENTER_CRITICAL();
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {
         OS_EXIT_CRITICAL();
-        *perr = OS_ERR_EVENT_TYPE;
+        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
         return;
     }
     len = OS_StrLen(pname);                      /* Can we fit the string in the storage area?         */
     if (len > (XXXXX_NAME_SIZE - 1)) {         /* No                                                 */
         OS_EXIT_CRITICAL();
-        *perr = OS_ERR_FLAG_NAME_TOO_LONG;
+        *perr = TEST_GIT_OS_ERR_FLAG_NAME_TOO_LONG;
         return;
     }
     (void)OS_StrCopy(pgrp->OSFlagName, pname);   /* Yes, copy name from XXXXX_GRP                    */
     OS_EXIT_CRITICAL();
-    *perr = OS_ERR_NONE;
+    *perr = TEST_GIT_OS_ERR_NONE;
     return;
 }
 #endif
@@ -540,15 +540,15 @@ void  OSFlagNameSet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
 *                            forever at the specified event flag group or, until a message arrives.
 *
 *              perr          is a pointer to an error code and can be:
-*                            OS_ERR_NONE               The desired bits have been set within the specified
+*                            TEST_GIT_OS_ERR_NONE               The desired bits have been set within the specified
 *                                                      'timeout'.
-*                            OS_ERR_PEND_ISR           If you tried to PEND from an ISR
-*                            OS_ERR_FLAG_INVALID_PGRP  If 'pgrp' is a NULL pointer.
-*                            OS_ERR_EVENT_TYPE         You are not pointing to an event flag group
-*                            OS_ERR_TIMEOUT            The bit(s) have not been set in the specified
+*                            TEST_GIT_OS_ERR_PEND_ISR           If you tried to PEND from an ISR
+*                            TEST_GIT_OS_ERR_FLAG_INVALID_PGRP  If 'pgrp' is a NULL pointer.
+*                            TEST_GIT_OS_ERR_EVENT_TYPE         You are not pointing to an event flag group
+*                            TEST_GIT_OS_ERR_TIMEOUT            The bit(s) have not been set in the specified
 *                                                      'timeout'.
-*                            OS_ERR_PEND_ABORT         The wait on the flag was aborted.
-*                            OS_ERR_FLAG_WAIT_TYPE     You didn't specify a proper 'wait_type' argument.
+*                            TEST_GIT_OS_ERR_PEND_ABORT         The wait on the flag was aborted.
+*                            TEST_GIT_OS_ERR_FLAG_WAIT_TYPE     You didn't specify a proper 'wait_type' argument.
 *
 * Returns    : The flags in the event flag group that made the task ready or, 0 if a timeout or an error
 *              occurred.
@@ -579,20 +579,20 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
         return ((XXXXXS)0);
     }
     if (pgrp == (XXXXX_GRP *)0) {                        /* Validate 'pgrp'                          */
-        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
         return ((XXXXXS)0);
     }
 #endif
     if (OSIntNesting > 0) {                                /* See if called from ISR ...               */
-        *perr = OS_ERR_PEND_ISR;                           /* ... can't PEND from an ISR               */
+        *perr = TEST_GIT_OS_ERR_PEND_ISR;                           /* ... can't PEND from an ISR               */
         return ((XXXXXS)0);
     }
     if (OSLockNesting > 0) {                               /* See if called with scheduler locked ...  */
-        *perr = OS_ERR_PEND_LOCKED;                        /* ... can't PEND when locked               */
+        *perr = TEST_GIT_OS_ERR_PEND_LOCKED;                        /* ... can't PEND when locked               */
         return ((XXXXXS)0);
     }
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {          /* Validate event block type                */
-        *perr = OS_ERR_EVENT_TYPE;
+        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
         return ((XXXXXS)0);
     }
     result = (INT8U)(wait_type & XXXXX_CONSUME);
@@ -613,7 +613,7 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
                  }
                  OSTCBCur->OSTCBFlagsRdy = flags_rdy;      /* Save flags that were ready               */
                  OS_EXIT_CRITICAL();                       /* Yes, condition met, return to caller     */
-                 *perr                   = OS_ERR_NONE;
+                 *perr                   = TEST_GIT_OS_ERR_NONE;
                  return (flags_rdy);
              } else {                                      /* Block task until events occur or timeout */
                  XXXXXBlock(pgrp, &node, flags, wait_type, timeout);
@@ -629,7 +629,7 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
                  }
                  OSTCBCur->OSTCBFlagsRdy = flags_rdy;      /* Save flags that were ready               */
                  OS_EXIT_CRITICAL();                       /* Yes, condition met, return to caller     */
-                 *perr                   = OS_ERR_NONE;
+                 *perr                   = TEST_GIT_OS_ERR_NONE;
                  return (flags_rdy);
              } else {                                      /* Block task until events occur or timeout */
                  XXXXXBlock(pgrp, &node, flags, wait_type, timeout);
@@ -646,7 +646,7 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
                  }
                  OSTCBCur->OSTCBFlagsRdy = flags_rdy;      /* Save flags that were ready               */
                  OS_EXIT_CRITICAL();                       /* Yes, condition met, return to caller     */
-                 *perr                   = OS_ERR_NONE;
+                 *perr                   = TEST_GIT_OS_ERR_NONE;
                  return (flags_rdy);
              } else {                                      /* Block task until events occur or timeout */
                  XXXXXBlock(pgrp, &node, flags, wait_type, timeout);
@@ -662,7 +662,7 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
                  }
                  OSTCBCur->OSTCBFlagsRdy = flags_rdy;      /* Save flags that were ready               */
                  OS_EXIT_CRITICAL();                       /* Yes, condition met, return to caller     */
-                 *perr                   = OS_ERR_NONE;
+                 *perr                   = TEST_GIT_OS_ERR_NONE;
                  return (flags_rdy);
              } else {                                      /* Block task until events occur or timeout */
                  XXXXXBlock(pgrp, &node, flags, wait_type, timeout);
@@ -674,7 +674,7 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
         default:
              OS_EXIT_CRITICAL();
              flags_rdy = (XXXXXS)0;
-             *perr      = OS_ERR_FLAG_WAIT_TYPE;
+             *perr      = TEST_GIT_OS_ERR_FLAG_WAIT_TYPE;
              return (flags_rdy);
     }
 /*$PAGE*/
@@ -690,11 +690,11 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
         switch (pend_stat) {
             case OS_STAT_PEND_TO:
             default:
-                 *perr = OS_ERR_TIMEOUT;                    /* Indicate that we timed-out waiting       */
+                 *perr = TEST_GIT_OS_ERR_TIMEOUT;                    /* Indicate that we timed-out waiting       */
                  break;
 
             case OS_STAT_PEND_ABORT:
-                 *perr = OS_ERR_PEND_ABORT;                 /* Indicate that we aborted   waiting       */
+                 *perr = TEST_GIT_OS_ERR_PEND_ABORT;                 /* Indicate that we aborted   waiting       */
                  break;
         }
         return (flags_rdy);
@@ -715,12 +715,12 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
 #endif
             default:
                  OS_EXIT_CRITICAL();
-                 *perr = OS_ERR_FLAG_WAIT_TYPE;
+                 *perr = TEST_GIT_OS_ERR_FLAG_WAIT_TYPE;
                  return ((XXXXXS)0);
         }
     }
     OS_EXIT_CRITICAL();
-    *perr = OS_ERR_NONE;                                   /* Event(s) must have occurred              */
+    *perr = TEST_GIT_OS_ERR_NONE;                                   /* Event(s) must have occurred              */
     return (flags_rdy);
 }
 /*$PAGE*/
@@ -781,10 +781,10 @@ XXXXXS  OSFlagPendGetFlagsRdy (void)
 *                                cleared (XXXXX_CLR)
 *
 *              perr          is a pointer to an error code and can be:
-*                            OS_ERR_NONE                The call was successfull
-*                            OS_ERR_FLAG_INVALID_PGRP   You passed a NULL pointer
-*                            OS_ERR_EVENT_TYPE          You are not pointing to an event flag group
-*                            OS_ERR_FLAG_INVALID_OPT    You specified an invalid option
+*                            TEST_GIT_OS_ERR_NONE                The call was successfull
+*                            TEST_GIT_OS_ERR_FLAG_INVALID_PGRP   You passed a NULL pointer
+*                            TEST_GIT_OS_ERR_EVENT_TYPE          You are not pointing to an event flag group
+*                            TEST_GIT_OS_ERR_FLAG_INVALID_OPT    You specified an invalid option
 *
 * Returns    : the new value of the event flags bits that are still set.
 *
@@ -814,12 +814,12 @@ XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
         return ((XXXXXS)0);
     }
     if (pgrp == (XXXXX_GRP *)0) {                  /* Validate 'pgrp'                                */
-        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
         return ((XXXXXS)0);
     }
 #endif
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {    /* Make sure we are pointing to an event flag grp */
-        *perr = OS_ERR_EVENT_TYPE;
+        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
         return ((XXXXXS)0);
     }
 /*$PAGE*/
@@ -835,7 +835,7 @@ XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
 
         default:
              OS_EXIT_CRITICAL();                     /* INVALID option                                 */
-             *perr = OS_ERR_FLAG_INVALID_OPT;
+             *perr = TEST_GIT_OS_ERR_FLAG_INVALID_OPT;
              return ((XXXXXS)0);
     }
     sched = OS_FALSE;                                /* Indicate that we don't need rescheduling       */
@@ -885,7 +885,7 @@ XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
 #endif
             default:
                  OS_EXIT_CRITICAL();
-                 *perr = OS_ERR_FLAG_WAIT_TYPE;
+                 *perr = TEST_GIT_OS_ERR_FLAG_WAIT_TYPE;
                  return ((XXXXXS)0);
         }
         pnode = (XXXXX_NODE *)pnode->OSFlagNodeNext; /* Point to next task waiting for event flag(s) */
@@ -897,7 +897,7 @@ XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
     OS_ENTER_CRITICAL();
     flags_cur = pgrp->OSFlagFlags;
     OS_EXIT_CRITICAL();
-    *perr     = OS_ERR_NONE;
+    *perr     = TEST_GIT_OS_ERR_NONE;
     return (flags_cur);
 }
 /*$PAGE*/
@@ -910,9 +910,9 @@ XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
 * Arguments  : pgrp         is a pointer to the desired event flag group.
 *
 *              perr          is a pointer to an error code returned to the called:
-*                            OS_ERR_NONE                The call was successfull
-*                            OS_ERR_FLAG_INVALID_PGRP   You passed a NULL pointer
-*                            OS_ERR_EVENT_TYPE          You are not pointing to an event flag group
+*                            TEST_GIT_OS_ERR_NONE                The call was successfull
+*                            TEST_GIT_OS_ERR_FLAG_INVALID_PGRP   You passed a NULL pointer
+*                            TEST_GIT_OS_ERR_EVENT_TYPE          You are not pointing to an event flag group
 *
 * Returns    : The current value of the event flag group.
 *
@@ -935,18 +935,18 @@ XXXXXS  OSFlagQuery (XXXXX_GRP *pgrp, INT8U *perr)
         return ((XXXXXS)0);
     }
     if (pgrp == (XXXXX_GRP *)0) {               /* Validate 'pgrp'                                   */
-        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
         return ((XXXXXS)0);
     }
 #endif
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) { /* Validate event block type                         */
-        *perr = OS_ERR_EVENT_TYPE;
+        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
         return ((XXXXXS)0);
     }
     OS_ENTER_CRITICAL();
     flags = pgrp->OSFlagFlags;
     OS_EXIT_CRITICAL();
-    *perr = OS_ERR_NONE;
+    *perr = TEST_GIT_OS_ERR_NONE;
     return (flags);                               /* Return the current value of the event flags       */
 }
 #endif
