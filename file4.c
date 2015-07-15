@@ -7,7 +7,7 @@
 *                          (c) Copyright 2001-2007, Jean J. Labrosse, Weston, FL
 *                                           All Rights Reserved
 *
-* File    : XXXXX.C
+* File    : OS_FLAG.C
 * By      : Jean J. Labrosse
 * Version : V2.85
 *
@@ -25,17 +25,17 @@
 #include <ucos_ii.h>
 #endif
 
-#if (XXXXX_EN > 0) && (OS_MAX_FLAGS > 0)
+#if (OS_FLAG_EN > 0) && (OS_MAX_FLAGS > 0)
 /*
 *********************************************************************************************************
 *                                            LOCAL PROTOTYPES
 *********************************************************************************************************
 */
 
-static  void     XXXXXBlock(XXXXX_GRP *pgrp, XXXXX_NODE *pnode, XXXXXS flags, INT8U wait_type, INT16U timeout);
-static  BOOLEAN  XXXXXTaskRdy(XXXXX_NODE *pnode, XXXXXS flags_rdy);
+static  void     OS_FLAGBlock(OS_FLAG_GRP *pgrp, OS_FLAG_NODE *pnode, OS_FLAGS flags, INT8U wait_type, INT16U timeout);
+static  BOOLEAN  OS_FLAGTaskRdy(OS_FLAG_NODE *pnode, OS_FLAGS flags_rdy);
 
-_TEST_GIT_
+// _TEST_GIT_
 
 /*$PAGE*/
 /*
@@ -59,24 +59,24 @@ _TEST_GIT_
 *                            to be set/cleared.
 *                            You can specify the following argument:
 *
-*                            XXXXX_WAIT_CLR_ALL   You will check ALL bits in 'flags' to be clear (0)
-*                            XXXXX_WAIT_CLR_ANY   You will check ANY bit  in 'flags' to be clear (0)
-*                            XXXXX_WAIT_SET_ALL   You will check ALL bits in 'flags' to be set   (1)
-*                            XXXXX_WAIT_SET_ANY   You will check ANY bit  in 'flags' to be set   (1)
+*                            OS_FLAG_WAIT_CLR_ALL   You will check ALL bits in 'flags' to be clear (0)
+*                            OS_FLAG_WAIT_CLR_ANY   You will check ANY bit  in 'flags' to be clear (0)
+*                            OS_FLAG_WAIT_SET_ALL   You will check ALL bits in 'flags' to be set   (1)
+*                            OS_FLAG_WAIT_SET_ANY   You will check ANY bit  in 'flags' to be set   (1)
 *
-*                            NOTE: Add XXXXX_CONSUME if you want the event flag to be 'consumed' by
+*                            NOTE: Add OS_FLAG_CONSUME if you want the event flag to be 'consumed' by
 *                                  the call.  Example, to wait for any flag in a group AND then clear
 *                                  the flags that are present, set 'wait_type' to:
 *
-*                                  XXXXX_WAIT_SET_ANY + XXXXX_CONSUME
+*                                  OS_FLAG_WAIT_SET_ANY + OS_FLAG_CONSUME
 *
 *              perr          is a pointer to an error code and can be:
-*                            TEST_GIT_OS_ERR_NONE               No error
-*                            TEST_GIT_OS_ERR_EVENT_TYPE         You are not pointing to an event flag group
-*                            TEST_GIT_OS_ERR_FLAG_WAIT_TYPE     You didn't specify a proper 'wait_type' argument.
-*                            TEST_GIT_OS_ERR_FLAG_INVALID_PGRP  You passed a NULL pointer instead of the event flag
+*                            OS_ERR_NONE               No error
+*                            OS_ERR_EVENT_TYPE         You are not pointing to an event flag group
+*                            OS_ERR_FLAG_WAIT_TYPE     You didn't specify a proper 'wait_type' argument.
+*                            OS_ERR_FLAG_INVALID_PGRP  You passed a NULL pointer instead of the event flag
 *                                                      group handle.
-*                            TEST_GIT_OS_ERR_FLAG_NOT_RDY       The desired flags you are waiting for are not
+*                            OS_ERR_FLAG_NOT_RDY       The desired flags you are waiting for are not
 *                                                      available.
 *
 * Returns    : The flags in the event flag group that made the task ready or, 0 if a timeout or an error
@@ -90,10 +90,10 @@ _TEST_GIT_
 *********************************************************************************************************
 */
 
-#if XXXXX_ACCEPT_EN > 0
-XXXXXS  OSFlagAccept (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT8U *perr)
+#if OS_FLAG_ACCEPT_EN > 0
+OS_FLAGS  OSFlagAccept (OS_FLAG_GRP *pgrp, OS_FLAGS flags, INT8U wait_type, INT8U *perr)
 {
-    XXXXXS      flags_rdy;
+    OS_FLAGS      flags_rdy;
     INT8U         result;
     BOOLEAN       consume;
 #if OS_CRITICAL_METHOD == 3                                /* Allocate storage for CPU status register */
@@ -104,73 +104,73 @@ XXXXXS  OSFlagAccept (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT8U *per
 
 #if OS_ARG_CHK_EN > 0
     if (perr == (INT8U *)0) {                              /* Validate 'perr'                          */
-        return ((XXXXXS)0);
+        return ((OS_FLAGS)0);
     }
-    if (pgrp == (XXXXX_GRP *)0) {                        /* Validate 'pgrp'                          */
-        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
-        return ((XXXXXS)0);
+    if (pgrp == (OS_FLAG_GRP *)0) {                        /* Validate 'pgrp'                          */
+        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        return ((OS_FLAGS)0);
     }
 #endif
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {          /* Validate event block type                */
-        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
-        return ((XXXXXS)0);
+        *perr = OS_ERR_EVENT_TYPE;
+        return ((OS_FLAGS)0);
     }
-    result = (INT8U)(wait_type & XXXXX_CONSUME);
+    result = (INT8U)(wait_type & OS_FLAG_CONSUME);
     if (result != (INT8U)0) {                              /* See if we need to consume the flags      */
-        wait_type &= ~XXXXX_CONSUME;
+        wait_type &= ~OS_FLAG_CONSUME;
         consume    = OS_TRUE;
     } else {
         consume    = OS_FALSE;
     }
 /*$PAGE*/
-    *perr = TEST_GIT_OS_ERR_NONE;                                   /* Assume NO error until proven otherwise.  */
+    *perr = OS_ERR_NONE;                                   /* Assume NO error until proven otherwise.  */
     OS_ENTER_CRITICAL();
     switch (wait_type) {
-        case XXXXX_WAIT_SET_ALL:                         /* See if all required flags are set        */
-             flags_rdy = (XXXXXS)(pgrp->OSFlagFlags & flags);     /* Extract only the bits we want   */
+        case OS_FLAG_WAIT_SET_ALL:                         /* See if all required flags are set        */
+             flags_rdy = (OS_FLAGS)(pgrp->OSFlagFlags & flags);     /* Extract only the bits we want   */
              if (flags_rdy == flags) {                     /* Must match ALL the bits that we want     */
                  if (consume == OS_TRUE) {                 /* See if we need to consume the flags      */
                      pgrp->OSFlagFlags &= ~flags_rdy;      /* Clear ONLY the flags that we wanted      */
                  }
              } else {
-                 *perr = TEST_GIT_OS_ERR_FLAG_NOT_RDY;
+                 *perr = OS_ERR_FLAG_NOT_RDY;
              }
              OS_EXIT_CRITICAL();
              break;
 
-        case XXXXX_WAIT_SET_ANY:
-             flags_rdy = (XXXXXS)(pgrp->OSFlagFlags & flags);     /* Extract only the bits we want   */
-             if (flags_rdy != (XXXXXS)0) {               /* See if any flag set                      */
+        case OS_FLAG_WAIT_SET_ANY:
+             flags_rdy = (OS_FLAGS)(pgrp->OSFlagFlags & flags);     /* Extract only the bits we want   */
+             if (flags_rdy != (OS_FLAGS)0) {               /* See if any flag set                      */
                  if (consume == OS_TRUE) {                 /* See if we need to consume the flags      */
                      pgrp->OSFlagFlags &= ~flags_rdy;      /* Clear ONLY the flags that we got         */
                  }
              } else {
-                 *perr = TEST_GIT_OS_ERR_FLAG_NOT_RDY;
+                 *perr = OS_ERR_FLAG_NOT_RDY;
              }
              OS_EXIT_CRITICAL();
              break;
 
-#if XXXXX_WAIT_CLR_EN > 0
-        case XXXXX_WAIT_CLR_ALL:                         /* See if all required flags are cleared    */
-             flags_rdy = (XXXXXS)(~pgrp->OSFlagFlags & flags);  /* Extract only the bits we want     */
+#if OS_FLAG_WAIT_CLR_EN > 0
+        case OS_FLAG_WAIT_CLR_ALL:                         /* See if all required flags are cleared    */
+             flags_rdy = (OS_FLAGS)(~pgrp->OSFlagFlags & flags);  /* Extract only the bits we want     */
              if (flags_rdy == flags) {                     /* Must match ALL the bits that we want     */
                  if (consume == OS_TRUE) {                 /* See if we need to consume the flags      */
                      pgrp->OSFlagFlags |= flags_rdy;       /* Set ONLY the flags that we wanted        */
                  }
              } else {
-                 *perr = TEST_GIT_OS_ERR_FLAG_NOT_RDY;
+                 *perr = OS_ERR_FLAG_NOT_RDY;
              }
              OS_EXIT_CRITICAL();
              break;
 
-        case XXXXX_WAIT_CLR_ANY:
-             flags_rdy = (XXXXXS)(~pgrp->OSFlagFlags & flags); /* Extract only the bits we want      */
-             if (flags_rdy != (XXXXXS)0) {               /* See if any flag cleared                  */
+        case OS_FLAG_WAIT_CLR_ANY:
+             flags_rdy = (OS_FLAGS)(~pgrp->OSFlagFlags & flags); /* Extract only the bits we want      */
+             if (flags_rdy != (OS_FLAGS)0) {               /* See if any flag cleared                  */
                  if (consume == OS_TRUE) {                 /* See if we need to consume the flags      */
                      pgrp->OSFlagFlags |= flags_rdy;       /* Set ONLY the flags that we got           */
                  }
              } else {
-                 *perr = TEST_GIT_OS_ERR_FLAG_NOT_RDY;
+                 *perr = OS_ERR_FLAG_NOT_RDY;
              }
              OS_EXIT_CRITICAL();
              break;
@@ -178,15 +178,15 @@ XXXXXS  OSFlagAccept (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT8U *per
 
         default:
              OS_EXIT_CRITICAL();
-             flags_rdy = (XXXXXS)0;
-             *perr     = TEST_GIT_OS_ERR_FLAG_WAIT_TYPE;
+             flags_rdy = (OS_FLAGS)0;
+             *perr     = OS_ERR_FLAG_WAIT_TYPE;
              break;
     }
     return (flags_rdy);
 }
 #endif
 
-_TEST_GIT_
+// _TEST_GIT_
 
 /*$PAGE*/
 /*
@@ -198,10 +198,10 @@ _TEST_GIT_
 * Arguments  : flags         Contains the initial value to store in the event flag group.
 *
 *              perr          is a pointer to an error code which will be returned to your application:
-*                               TEST_GIT_OS_ERR_NONE               if the call was successful.
-*                               TEST_GIT_OS_ERR_CREATE_ISR         if you attempted to create an Event Flag from an
+*                               OS_ERR_NONE               if the call was successful.
+*                               OS_ERR_CREATE_ISR         if you attempted to create an Event Flag from an
 *                                                         ISR.
-*                               TEST_GIT_OS_ERR_FLAG_GRP_DEPLETED  if there are no more event flag groups
+*                               OS_ERR_FLAG_GRP_DEPLETED  if there are no more event flag groups
 *
 * Returns    : A pointer to an event flag group or a NULL pointer if no more groups are available.
 *
@@ -209,9 +209,9 @@ _TEST_GIT_
 *********************************************************************************************************
 */
 
-XXXXX_GRP  *OSFlagCreate (XXXXXS flags, INT8U *perr)
+OS_FLAG_GRP  *OSFlagCreate (OS_FLAGS flags, INT8U *perr)
 {
-    XXXXX_GRP *pgrp;
+    OS_FLAG_GRP *pgrp;
 #if OS_CRITICAL_METHOD == 3                         /* Allocate storage for CPU status register        */
     OS_CPU_SR    cpu_sr = 0;
 #endif
@@ -220,30 +220,30 @@ XXXXX_GRP  *OSFlagCreate (XXXXXS flags, INT8U *perr)
 
 #if OS_ARG_CHK_EN > 0
     if (perr == (INT8U *)0) {                       /* Validate 'perr'                                 */
-        return ((XXXXX_GRP *)0);
+        return ((OS_FLAG_GRP *)0);
     }
 #endif
     if (OSIntNesting > 0) {                         /* See if called from ISR ...                      */
-        *perr = TEST_GIT_OS_ERR_CREATE_ISR;                  /* ... can't CREATE from an ISR                    */
-        return ((XXXXX_GRP *)0);
+        *perr = OS_ERR_CREATE_ISR;                  /* ... can't CREATE from an ISR                    */
+        return ((OS_FLAG_GRP *)0);
     }
     OS_ENTER_CRITICAL();
     pgrp = OSFlagFreeList;                          /* Get next free event flag                        */
-    if (pgrp != (XXXXX_GRP *)0) {                 /* See if we have event flag groups available      */
+    if (pgrp != (OS_FLAG_GRP *)0) {                 /* See if we have event flag groups available      */
                                                     /* Adjust free list                                */
-        OSFlagFreeList       = (XXXXX_GRP *)OSFlagFreeList->OSFlagWaitList;
+        OSFlagFreeList       = (OS_FLAG_GRP *)OSFlagFreeList->OSFlagWaitList;
         pgrp->OSFlagType     = OS_EVENT_TYPE_FLAG;  /* Set to event flag group type                    */
         pgrp->OSFlagFlags    = flags;               /* Set to desired initial value                    */
         pgrp->OSFlagWaitList = (void *)0;           /* Clear list of tasks waiting on flags            */
-#if XXXXX_NAME_SIZE > 1
+#if OS_FLAG_NAME_SIZE > 1
         pgrp->OSFlagName[0]  = '?';
         pgrp->OSFlagName[1]  = OS_ASCII_NUL;
 #endif
         OS_EXIT_CRITICAL();
-        *perr                = TEST_GIT_OS_ERR_NONE;
+        *perr                = OS_ERR_NONE;
     } else {
         OS_EXIT_CRITICAL();
-        *perr                = TEST_GIT_OS_ERR_FLAG_GRP_DEPLETED;
+        *perr                = OS_ERR_FLAG_GRP_DEPLETED;
     }
     return (pgrp);                                  /* Return pointer to event flag group              */
 }
@@ -265,14 +265,14 @@ XXXXX_GRP  *OSFlagCreate (XXXXXS flags, INT8U *perr)
 *                                                    readied.
 *
 *              perr          is a pointer to an error code that can contain one of the following values:
-*                            TEST_GIT_OS_ERR_NONE               The call was successful and the event flag group was
+*                            OS_ERR_NONE               The call was successful and the event flag group was
 *                                                      deleted
-*                            TEST_GIT_OS_ERR_DEL_ISR            If you attempted to delete the event flag group from
+*                            OS_ERR_DEL_ISR            If you attempted to delete the event flag group from
 *                                                      an ISR
-*                            TEST_GIT_OS_ERR_FLAG_INVALID_PGRP  If 'pgrp' is a NULL pointer.
-*                            TEST_GIT_OS_ERR_EVENT_TYPE         If you didn't pass a pointer to an event flag group
-*                            TEST_GIT_OS_ERR_INVALID_OPT        An invalid option was specified
-*                            TEST_GIT_OS_ERR_TASK_WAITING       One or more tasks were waiting on the event flag
+*                            OS_ERR_FLAG_INVALID_PGRP  If 'pgrp' is a NULL pointer.
+*                            OS_ERR_EVENT_TYPE         If you didn't pass a pointer to an event flag group
+*                            OS_ERR_INVALID_OPT        An invalid option was specified
+*                            OS_ERR_TASK_WAITING       One or more tasks were waiting on the event flag
 *                                                      group.
 *
 * Returns    : pgrp          upon error
@@ -285,33 +285,33 @@ XXXXX_GRP  *OSFlagCreate (XXXXXS flags, INT8U *perr)
 *********************************************************************************************************
 */
 
-#if XXXXX_DEL_EN > 0
-XXXXX_GRP  *OSFlagDel (XXXXX_GRP *pgrp, INT8U opt, INT8U *perr)
+#if OS_FLAG_DEL_EN > 0
+OS_FLAG_GRP  *OSFlagDel (OS_FLAG_GRP *pgrp, INT8U opt, INT8U *perr)
 {
     BOOLEAN       tasks_waiting;
-    XXXXX_NODE *pnode;
-    XXXXX_GRP  *pgrp_return;
+    OS_FLAG_NODE *pnode;
+    OS_FLAG_GRP  *pgrp_return;
 #if OS_CRITICAL_METHOD == 3                                /* Allocate storage for CPU status register */
     OS_CPU_SR     cpu_sr = 0;
 #endif
 
-_TEST_GIT_
+// _TEST_GIT_
 
 #if OS_ARG_CHK_EN > 0
     if (perr == (INT8U *)0) {                              /* Validate 'perr'                          */
         return (pgrp);
     }
-    if (pgrp == (XXXXX_GRP *)0) {                        /* Validate 'pgrp'                          */
-        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
+    if (pgrp == (OS_FLAG_GRP *)0) {                        /* Validate 'pgrp'                          */
+        *perr = OS_ERR_FLAG_INVALID_PGRP;
         return (pgrp);
     }
 #endif
     if (OSIntNesting > 0) {                                /* See if called from ISR ...               */
-        *perr = TEST_GIT_OS_ERR_DEL_ISR;                            /* ... can't DELETE from an ISR             */
+        *perr = OS_ERR_DEL_ISR;                            /* ... can't DELETE from an ISR             */
         return (pgrp);
     }
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {          /* Validate event group type                */
-        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
+        *perr = OS_ERR_EVENT_TYPE;
         return (pgrp);
     }
     OS_ENTER_CRITICAL();
@@ -323,49 +323,49 @@ _TEST_GIT_
     switch (opt) {
         case OS_DEL_NO_PEND:                               /* Delete group if no task waiting          */
              if (tasks_waiting == OS_FALSE) {
-#if XXXXX_NAME_SIZE > 1
+#if OS_FLAG_NAME_SIZE > 1
                  pgrp->OSFlagName[0]  = '?';               /* Unknown name                             */
                  pgrp->OSFlagName[1]  = OS_ASCII_NUL;
 #endif
                  pgrp->OSFlagType     = OS_EVENT_TYPE_UNUSED;
                  pgrp->OSFlagWaitList = (void *)OSFlagFreeList; /* Return group to free list           */
-                 pgrp->OSFlagFlags    = (XXXXXS)0;
+                 pgrp->OSFlagFlags    = (OS_FLAGS)0;
                  OSFlagFreeList       = pgrp;
                  OS_EXIT_CRITICAL();
-                 *perr                = TEST_GIT_OS_ERR_NONE;
-                 pgrp_return          = (XXXXX_GRP *)0;  /* Event Flag Group has been deleted        */
+                 *perr                = OS_ERR_NONE;
+                 pgrp_return          = (OS_FLAG_GRP *)0;  /* Event Flag Group has been deleted        */
              } else {
                  OS_EXIT_CRITICAL();
-                 *perr                = TEST_GIT_OS_ERR_TASK_WAITING;
+                 *perr                = OS_ERR_TASK_WAITING;
                  pgrp_return          = pgrp;
              }
              break;
 
         case OS_DEL_ALWAYS:                                /* Always delete the event flag group       */
-             pnode = (XXXXX_NODE *)pgrp->OSFlagWaitList;
-             while (pnode != (XXXXX_NODE *)0) {          /* Ready ALL tasks waiting for flags        */
-                 (void)XXXXXTaskRdy(pnode, (XXXXXS)0);
-                 pnode = (XXXXX_NODE *)pnode->OSFlagNodeNext;
+             pnode = (OS_FLAG_NODE *)pgrp->OSFlagWaitList;
+             while (pnode != (OS_FLAG_NODE *)0) {          /* Ready ALL tasks waiting for flags        */
+                 (void)OS_FLAGTaskRdy(pnode, (OS_FLAGS)0);
+                 pnode = (OS_FLAG_NODE *)pnode->OSFlagNodeNext;
              }
-#if XXXXX_NAME_SIZE > 1
+#if OS_FLAG_NAME_SIZE > 1
              pgrp->OSFlagName[0]  = '?';                   /* Unknown name                             */
              pgrp->OSFlagName[1]  = OS_ASCII_NUL;
 #endif
              pgrp->OSFlagType     = OS_EVENT_TYPE_UNUSED;
              pgrp->OSFlagWaitList = (void *)OSFlagFreeList;/* Return group to free list                */
-             pgrp->OSFlagFlags    = (XXXXXS)0;
+             pgrp->OSFlagFlags    = (OS_FLAGS)0;
              OSFlagFreeList       = pgrp;
              OS_EXIT_CRITICAL();
              if (tasks_waiting == OS_TRUE) {               /* Reschedule only if task(s) were waiting  */
                  OS_Sched();                               /* Find highest priority task ready to run  */
              }
-             *perr = TEST_GIT_OS_ERR_NONE;
-             pgrp_return          = (XXXXX_GRP *)0;      /* Event Flag Group has been deleted        */
+             *perr = OS_ERR_NONE;
+             pgrp_return          = (OS_FLAG_GRP *)0;      /* Event Flag Group has been deleted        */
              break;
 
         default:
              OS_EXIT_CRITICAL();
-             *perr                = TEST_GIT_OS_ERR_INVALID_OPT;
+             *perr                = OS_ERR_INVALID_OPT;
              pgrp_return          = pgrp;
              break;
     }
@@ -382,22 +382,22 @@ _TEST_GIT_
 * Arguments  : pgrp      is a pointer to the event flag group.
 *
 *              pname     is a pointer to an ASCII string that will receive the name of the event flag
-*                        group.  The string must be able to hold at least XXXXX_NAME_SIZE characters.
+*                        group.  The string must be able to hold at least OS_FLAG_NAME_SIZE characters.
 *
 *              perr      is a pointer to an error code that can contain one of the following values:
 *
-*                        TEST_GIT_OS_ERR_NONE                if the requested task is resumed
-*                        TEST_GIT_OS_ERR_EVENT_TYPE          if 'pevent' is not pointing to an event flag group
-*                        TEST_GIT_OS_ERR_PNAME_NULL          You passed a NULL pointer for 'pname'
-*                        TEST_GIT_OS_ERR_FLAG_INVALID_PGRP   if you passed a NULL pointer for 'pgrp'
-*                        TEST_GIT_OS_ERR_NAME_GET_ISR        if you called this function from an ISR
+*                        OS_ERR_NONE                if the requested task is resumed
+*                        OS_ERR_EVENT_TYPE          if 'pevent' is not pointing to an event flag group
+*                        OS_ERR_PNAME_NULL          You passed a NULL pointer for 'pname'
+*                        OS_ERR_FLAG_INVALID_PGRP   if you passed a NULL pointer for 'pgrp'
+*                        OS_ERR_NAME_GET_ISR        if you called this function from an ISR
 *
 * Returns    : The length of the string or 0 if the 'pgrp' is a NULL pointer.
 *********************************************************************************************************
 */
 
-#if XXXXX_NAME_SIZE > 1
-INT8U  OSFlagNameGet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
+#if OS_FLAG_NAME_SIZE > 1
+INT8U  OSFlagNameGet (OS_FLAG_GRP *pgrp, INT8U *pname, INT8U *perr)
 {
     INT8U      len;
 #if OS_CRITICAL_METHOD == 3                      /* Allocate storage for CPU status register           */
@@ -410,28 +410,28 @@ INT8U  OSFlagNameGet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
     if (perr == (INT8U *)0) {                    /* Validate 'perr'                                    */
         return (0);
     }
-    if (pgrp == (XXXXX_GRP *)0) {              /* Is 'pgrp' a NULL pointer?                          */
-        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
+    if (pgrp == (OS_FLAG_GRP *)0) {              /* Is 'pgrp' a NULL pointer?                          */
+        *perr = OS_ERR_FLAG_INVALID_PGRP;
         return (0);
     }
     if (pname == (INT8U *)0) {                   /* Is 'pname' a NULL pointer?                         */
-        *perr = TEST_GIT_OS_ERR_PNAME_NULL;
+        *perr = OS_ERR_PNAME_NULL;
         return (0);
     }
 #endif
     if (OSIntNesting > 0) {                      /* See if trying to call from an ISR                  */
-        *perr = TEST_GIT_OS_ERR_NAME_GET_ISR;
+        *perr = OS_ERR_NAME_GET_ISR;
         return (0);
     }
     OS_ENTER_CRITICAL();
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {
         OS_EXIT_CRITICAL();
-        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
+        *perr = OS_ERR_EVENT_TYPE;
         return (0);
     }
-    len   = OS_StrCopy(pname, pgrp->OSFlagName); /* Copy name from XXXXX_GRP                         */
+    len   = OS_StrCopy(pname, pgrp->OSFlagName); /* Copy name from OS_FLAG_GRP                         */
     OS_EXIT_CRITICAL();
-    *perr = TEST_GIT_OS_ERR_NONE;
+    *perr = OS_ERR_NONE;
     return (len);
 }
 #endif
@@ -446,22 +446,22 @@ INT8U  OSFlagNameGet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
 * Arguments  : pgrp      is a pointer to the event flag group.
 *
 *              pname     is a pointer to an ASCII string that will be used as the name of the event flag
-*                        group.  The string must be able to hold at least XXXXX_NAME_SIZE characters.
+*                        group.  The string must be able to hold at least OS_FLAG_NAME_SIZE characters.
 *
 *              perr      is a pointer to an error code that can contain one of the following values:
 *
-*                        TEST_GIT_OS_ERR_NONE                if the requested task is resumed
-*                        TEST_GIT_OS_ERR_EVENT_TYPE          if 'pevent' is not pointing to an event flag group
-*                        TEST_GIT_OS_ERR_PNAME_NULL          You passed a NULL pointer for 'pname'
-*                        TEST_GIT_OS_ERR_FLAG_INVALID_PGRP   if you passed a NULL pointer for 'pgrp'
-*                        TEST_GIT_OS_ERR_NAME_SET_ISR        if you called this function from an ISR
+*                        OS_ERR_NONE                if the requested task is resumed
+*                        OS_ERR_EVENT_TYPE          if 'pevent' is not pointing to an event flag group
+*                        OS_ERR_PNAME_NULL          You passed a NULL pointer for 'pname'
+*                        OS_ERR_FLAG_INVALID_PGRP   if you passed a NULL pointer for 'pgrp'
+*                        OS_ERR_NAME_SET_ISR        if you called this function from an ISR
 *
 * Returns    : None
 *********************************************************************************************************
 */
 
-#if XXXXX_NAME_SIZE > 1
-void  OSFlagNameSet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
+#if OS_FLAG_NAME_SIZE > 1
+void  OSFlagNameSet (OS_FLAG_GRP *pgrp, INT8U *pname, INT8U *perr)
 {
     INT8U      len;
 #if OS_CRITICAL_METHOD == 3                      /* Allocate storage for CPU status register           */
@@ -474,34 +474,34 @@ void  OSFlagNameSet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
     if (perr == (INT8U *)0) {                    /* Validate 'perr'                                    */
         return;
     }
-    if (pgrp == (XXXXX_GRP *)0) {              /* Is 'pgrp' a NULL pointer?                          */
-        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
+    if (pgrp == (OS_FLAG_GRP *)0) {              /* Is 'pgrp' a NULL pointer?                          */
+        *perr = OS_ERR_FLAG_INVALID_PGRP;
         return;
     }
     if (pname == (INT8U *)0) {                   /* Is 'pname' a NULL pointer?                         */
-        *perr = TEST_GIT_OS_ERR_PNAME_NULL;
+        *perr = OS_ERR_PNAME_NULL;
         return;
     }
 #endif
     if (OSIntNesting > 0) {                      /* See if trying to call from an ISR                  */
-        *perr = TEST_GIT_OS_ERR_NAME_SET_ISR;
+        *perr = OS_ERR_NAME_SET_ISR;
         return;
     }
     OS_ENTER_CRITICAL();
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {
         OS_EXIT_CRITICAL();
-        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
+        *perr = OS_ERR_EVENT_TYPE;
         return;
     }
     len = OS_StrLen(pname);                      /* Can we fit the string in the storage area?         */
-    if (len > (XXXXX_NAME_SIZE - 1)) {         /* No                                                 */
+    if (len > (OS_FLAG_NAME_SIZE - 1)) {         /* No                                                 */
         OS_EXIT_CRITICAL();
-        *perr = TEST_GIT_OS_ERR_FLAG_NAME_TOO_LONG;
+        *perr = OS_ERR_FLAG_NAME_TOO_LONG;
         return;
     }
-    (void)OS_StrCopy(pgrp->OSFlagName, pname);   /* Yes, copy name from XXXXX_GRP                    */
+    (void)OS_StrCopy(pgrp->OSFlagName, pname);   /* Yes, copy name from OS_FLAG_GRP                    */
     OS_EXIT_CRITICAL();
-    *perr = TEST_GIT_OS_ERR_NONE;
+    *perr = OS_ERR_NONE;
     return;
 }
 #endif
@@ -524,31 +524,31 @@ void  OSFlagNameSet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
 *              wait_type     specifies whether you want ALL bits to be set or ANY of the bits to be set.
 *                            You can specify the following argument:
 *
-*                            XXXXX_WAIT_CLR_ALL   You will wait for ALL bits in 'mask' to be clear (0)
-*                            XXXXX_WAIT_SET_ALL   You will wait for ALL bits in 'mask' to be set   (1)
-*                            XXXXX_WAIT_CLR_ANY   You will wait for ANY bit  in 'mask' to be clear (0)
-*                            XXXXX_WAIT_SET_ANY   You will wait for ANY bit  in 'mask' to be set   (1)
+*                            OS_FLAG_WAIT_CLR_ALL   You will wait for ALL bits in 'mask' to be clear (0)
+*                            OS_FLAG_WAIT_SET_ALL   You will wait for ALL bits in 'mask' to be set   (1)
+*                            OS_FLAG_WAIT_CLR_ANY   You will wait for ANY bit  in 'mask' to be clear (0)
+*                            OS_FLAG_WAIT_SET_ANY   You will wait for ANY bit  in 'mask' to be set   (1)
 *
-*                            NOTE: Add XXXXX_CONSUME if you want the event flag to be 'consumed' by
+*                            NOTE: Add OS_FLAG_CONSUME if you want the event flag to be 'consumed' by
 *                                  the call.  Example, to wait for any flag in a group AND then clear
 *                                  the flags that are present, set 'wait_type' to:
 *
-*                                  XXXXX_WAIT_SET_ANY + XXXXX_CONSUME
+*                                  OS_FLAG_WAIT_SET_ANY + OS_FLAG_CONSUME
 *
 *              timeout       is an optional timeout (in clock ticks) that your task will wait for the
 *                            desired bit combination.  If you specify 0, however, your task will wait
 *                            forever at the specified event flag group or, until a message arrives.
 *
 *              perr          is a pointer to an error code and can be:
-*                            TEST_GIT_OS_ERR_NONE               The desired bits have been set within the specified
+*                            OS_ERR_NONE               The desired bits have been set within the specified
 *                                                      'timeout'.
-*                            TEST_GIT_OS_ERR_PEND_ISR           If you tried to PEND from an ISR
-*                            TEST_GIT_OS_ERR_FLAG_INVALID_PGRP  If 'pgrp' is a NULL pointer.
-*                            TEST_GIT_OS_ERR_EVENT_TYPE         You are not pointing to an event flag group
-*                            TEST_GIT_OS_ERR_TIMEOUT            The bit(s) have not been set in the specified
+*                            OS_ERR_PEND_ISR           If you tried to PEND from an ISR
+*                            OS_ERR_FLAG_INVALID_PGRP  If 'pgrp' is a NULL pointer.
+*                            OS_ERR_EVENT_TYPE         You are not pointing to an event flag group
+*                            OS_ERR_TIMEOUT            The bit(s) have not been set in the specified
 *                                                      'timeout'.
-*                            TEST_GIT_OS_ERR_PEND_ABORT         The wait on the flag was aborted.
-*                            TEST_GIT_OS_ERR_FLAG_WAIT_TYPE     You didn't specify a proper 'wait_type' argument.
+*                            OS_ERR_PEND_ABORT         The wait on the flag was aborted.
+*                            OS_ERR_FLAG_WAIT_TYPE     You didn't specify a proper 'wait_type' argument.
 *
 * Returns    : The flags in the event flag group that made the task ready or, 0 if a timeout or an error
 *              occurred.
@@ -561,10 +561,10 @@ void  OSFlagNameSet (XXXXX_GRP *pgrp, INT8U *pname, INT8U *perr)
 *********************************************************************************************************
 */
 
-XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeout, INT8U *perr)
+OS_FLAGS  OSFlagPend (OS_FLAG_GRP *pgrp, OS_FLAGS flags, INT8U wait_type, INT16U timeout, INT8U *perr)
 {
-    XXXXX_NODE  node;
-    XXXXXS      flags_rdy;
+    OS_FLAG_NODE  node;
+    OS_FLAGS      flags_rdy;
     INT8U         result;
     INT8U         pend_stat;
     BOOLEAN       consume;
@@ -576,28 +576,28 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
 
 #if OS_ARG_CHK_EN > 0
     if (perr == (INT8U *)0) {                              /* Validate 'perr'                          */
-        return ((XXXXXS)0);
+        return ((OS_FLAGS)0);
     }
-    if (pgrp == (XXXXX_GRP *)0) {                        /* Validate 'pgrp'                          */
-        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
-        return ((XXXXXS)0);
+    if (pgrp == (OS_FLAG_GRP *)0) {                        /* Validate 'pgrp'                          */
+        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        return ((OS_FLAGS)0);
     }
 #endif
     if (OSIntNesting > 0) {                                /* See if called from ISR ...               */
-        *perr = TEST_GIT_OS_ERR_PEND_ISR;                           /* ... can't PEND from an ISR               */
-        return ((XXXXXS)0);
+        *perr = OS_ERR_PEND_ISR;                           /* ... can't PEND from an ISR               */
+        return ((OS_FLAGS)0);
     }
     if (OSLockNesting > 0) {                               /* See if called with scheduler locked ...  */
-        *perr = TEST_GIT_OS_ERR_PEND_LOCKED;                        /* ... can't PEND when locked               */
-        return ((XXXXXS)0);
+        *perr = OS_ERR_PEND_LOCKED;                        /* ... can't PEND when locked               */
+        return ((OS_FLAGS)0);
     }
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {          /* Validate event block type                */
-        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
-        return ((XXXXXS)0);
+        *perr = OS_ERR_EVENT_TYPE;
+        return ((OS_FLAGS)0);
     }
-    result = (INT8U)(wait_type & XXXXX_CONSUME);
+    result = (INT8U)(wait_type & OS_FLAG_CONSUME);
     if (result != (INT8U)0) {                             /* See if we need to consume the flags      */
-        wait_type &= ~(INT8U)XXXXX_CONSUME;
+        wait_type &= ~(INT8U)OS_FLAG_CONSUME;
         consume    = OS_TRUE;
     } else {
         consume    = OS_FALSE;
@@ -605,67 +605,67 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
 /*$PAGE*/
     OS_ENTER_CRITICAL();
     switch (wait_type) {
-        case XXXXX_WAIT_SET_ALL:                         /* See if all required flags are set        */
-             flags_rdy = (XXXXXS)(pgrp->OSFlagFlags & flags);   /* Extract only the bits we want     */
+        case OS_FLAG_WAIT_SET_ALL:                         /* See if all required flags are set        */
+             flags_rdy = (OS_FLAGS)(pgrp->OSFlagFlags & flags);   /* Extract only the bits we want     */
              if (flags_rdy == flags) {                     /* Must match ALL the bits that we want     */
                  if (consume == OS_TRUE) {                 /* See if we need to consume the flags      */
                      pgrp->OSFlagFlags &= ~flags_rdy;      /* Clear ONLY the flags that we wanted      */
                  }
                  OSTCBCur->OSTCBFlagsRdy = flags_rdy;      /* Save flags that were ready               */
                  OS_EXIT_CRITICAL();                       /* Yes, condition met, return to caller     */
-                 *perr                   = TEST_GIT_OS_ERR_NONE;
+                 *perr                   = OS_ERR_NONE;
                  return (flags_rdy);
              } else {                                      /* Block task until events occur or timeout */
-                 XXXXXBlock(pgrp, &node, flags, wait_type, timeout);
+                 OS_FLAGBlock(pgrp, &node, flags, wait_type, timeout);
                  OS_EXIT_CRITICAL();
              }
              break;
 
-        case XXXXX_WAIT_SET_ANY:
-             flags_rdy = (XXXXXS)(pgrp->OSFlagFlags & flags);    /* Extract only the bits we want    */
-             if (flags_rdy != (XXXXXS)0) {               /* See if any flag set                      */
+        case OS_FLAG_WAIT_SET_ANY:
+             flags_rdy = (OS_FLAGS)(pgrp->OSFlagFlags & flags);    /* Extract only the bits we want    */
+             if (flags_rdy != (OS_FLAGS)0) {               /* See if any flag set                      */
                  if (consume == OS_TRUE) {                 /* See if we need to consume the flags      */
                      pgrp->OSFlagFlags &= ~flags_rdy;      /* Clear ONLY the flags that we got         */
                  }
                  OSTCBCur->OSTCBFlagsRdy = flags_rdy;      /* Save flags that were ready               */
                  OS_EXIT_CRITICAL();                       /* Yes, condition met, return to caller     */
-                 *perr                   = TEST_GIT_OS_ERR_NONE;
+                 *perr                   = OS_ERR_NONE;
                  return (flags_rdy);
              } else {                                      /* Block task until events occur or timeout */
-                 XXXXXBlock(pgrp, &node, flags, wait_type, timeout);
+                 OS_FLAGBlock(pgrp, &node, flags, wait_type, timeout);
                  OS_EXIT_CRITICAL();
              }
              break;
 
-#if XXXXX_WAIT_CLR_EN > 0
-        case XXXXX_WAIT_CLR_ALL:                         /* See if all required flags are cleared    */
-             flags_rdy = (XXXXXS)(~pgrp->OSFlagFlags & flags);  /* Extract only the bits we want     */
+#if OS_FLAG_WAIT_CLR_EN > 0
+        case OS_FLAG_WAIT_CLR_ALL:                         /* See if all required flags are cleared    */
+             flags_rdy = (OS_FLAGS)(~pgrp->OSFlagFlags & flags);  /* Extract only the bits we want     */
              if (flags_rdy == flags) {                     /* Must match ALL the bits that we want     */
                  if (consume == OS_TRUE) {                 /* See if we need to consume the flags      */
                      pgrp->OSFlagFlags |= flags_rdy;       /* Set ONLY the flags that we wanted        */
                  }
                  OSTCBCur->OSTCBFlagsRdy = flags_rdy;      /* Save flags that were ready               */
                  OS_EXIT_CRITICAL();                       /* Yes, condition met, return to caller     */
-                 *perr                   = TEST_GIT_OS_ERR_NONE;
+                 *perr                   = OS_ERR_NONE;
                  return (flags_rdy);
              } else {                                      /* Block task until events occur or timeout */
-                 XXXXXBlock(pgrp, &node, flags, wait_type, timeout);
+                 OS_FLAGBlock(pgrp, &node, flags, wait_type, timeout);
                  OS_EXIT_CRITICAL();
              }
              break;
 
-        case XXXXX_WAIT_CLR_ANY:
-             flags_rdy = (XXXXXS)(~pgrp->OSFlagFlags & flags); /* Extract only the bits we want      */
-             if (flags_rdy != (XXXXXS)0) {               /* See if any flag cleared                  */
+        case OS_FLAG_WAIT_CLR_ANY:
+             flags_rdy = (OS_FLAGS)(~pgrp->OSFlagFlags & flags); /* Extract only the bits we want      */
+             if (flags_rdy != (OS_FLAGS)0) {               /* See if any flag cleared                  */
                  if (consume == OS_TRUE) {                 /* See if we need to consume the flags      */
                      pgrp->OSFlagFlags |= flags_rdy;       /* Set ONLY the flags that we got           */
                  }
                  OSTCBCur->OSTCBFlagsRdy = flags_rdy;      /* Save flags that were ready               */
                  OS_EXIT_CRITICAL();                       /* Yes, condition met, return to caller     */
-                 *perr                   = TEST_GIT_OS_ERR_NONE;
+                 *perr                   = OS_ERR_NONE;
                  return (flags_rdy);
              } else {                                      /* Block task until events occur or timeout */
-                 XXXXXBlock(pgrp, &node, flags, wait_type, timeout);
+                 OS_FLAGBlock(pgrp, &node, flags, wait_type, timeout);
                  OS_EXIT_CRITICAL();
              }
              break;
@@ -673,8 +673,8 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
 
         default:
              OS_EXIT_CRITICAL();
-             flags_rdy = (XXXXXS)0;
-             *perr      = TEST_GIT_OS_ERR_FLAG_WAIT_TYPE;
+             flags_rdy = (OS_FLAGS)0;
+             *perr      = OS_ERR_FLAG_WAIT_TYPE;
              return (flags_rdy);
     }
 /*$PAGE*/
@@ -683,18 +683,18 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
     if (OSTCBCur->OSTCBStatPend != OS_STAT_PEND_OK) {      /* Have we timed-out or aborted?            */
         pend_stat                = OSTCBCur->OSTCBStatPend;
         OSTCBCur->OSTCBStatPend  = OS_STAT_PEND_OK;
-        XXXXXUnlink(&node);
+        OS_FLAGUnlink(&node);
         OSTCBCur->OSTCBStat      = OS_STAT_RDY;            /* Yes, make task ready-to-run              */
         OS_EXIT_CRITICAL();
-        flags_rdy                = (XXXXXS)0;
+        flags_rdy                = (OS_FLAGS)0;
         switch (pend_stat) {
             case OS_STAT_PEND_TO:
             default:
-                 *perr = TEST_GIT_OS_ERR_TIMEOUT;                    /* Indicate that we timed-out waiting       */
+                 *perr = OS_ERR_TIMEOUT;                    /* Indicate that we timed-out waiting       */
                  break;
 
             case OS_STAT_PEND_ABORT:
-                 *perr = TEST_GIT_OS_ERR_PEND_ABORT;                 /* Indicate that we aborted   waiting       */
+                 *perr = OS_ERR_PEND_ABORT;                 /* Indicate that we aborted   waiting       */
                  break;
         }
         return (flags_rdy);
@@ -702,25 +702,25 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
     flags_rdy = OSTCBCur->OSTCBFlagsRdy;
     if (consume == OS_TRUE) {                              /* See if we need to consume the flags      */
         switch (wait_type) {
-            case XXXXX_WAIT_SET_ALL:
-            case XXXXX_WAIT_SET_ANY:                     /* Clear ONLY the flags we got              */
+            case OS_FLAG_WAIT_SET_ALL:
+            case OS_FLAG_WAIT_SET_ANY:                     /* Clear ONLY the flags we got              */
                  pgrp->OSFlagFlags &= ~flags_rdy;
                  break;
 
-#if XXXXX_WAIT_CLR_EN > 0
-            case XXXXX_WAIT_CLR_ALL:
-            case XXXXX_WAIT_CLR_ANY:                     /* Set   ONLY the flags we got              */
+#if OS_FLAG_WAIT_CLR_EN > 0
+            case OS_FLAG_WAIT_CLR_ALL:
+            case OS_FLAG_WAIT_CLR_ANY:                     /* Set   ONLY the flags we got              */
                  pgrp->OSFlagFlags |=  flags_rdy;
                  break;
 #endif
             default:
                  OS_EXIT_CRITICAL();
-                 *perr = TEST_GIT_OS_ERR_FLAG_WAIT_TYPE;
-                 return ((XXXXXS)0);
+                 *perr = OS_ERR_FLAG_WAIT_TYPE;
+                 return ((OS_FLAGS)0);
         }
     }
     OS_EXIT_CRITICAL();
-    *perr = TEST_GIT_OS_ERR_NONE;                                   /* Event(s) must have occurred              */
+    *perr = OS_ERR_NONE;                                   /* Event(s) must have occurred              */
     return (flags_rdy);
 }
 /*$PAGE*/
@@ -739,9 +739,9 @@ XXXXXS  OSFlagPend (XXXXX_GRP *pgrp, XXXXXS flags, INT8U wait_type, INT16U timeo
 *********************************************************************************************************
 */
 
-XXXXXS  OSFlagPendGetFlagsRdy (void)
+OS_FLAGS  OSFlagPendGetFlagsRdy (void)
 {
-    XXXXXS      flags;
+    OS_FLAGS      flags;
 #if OS_CRITICAL_METHOD == 3                                /* Allocate storage for CPU status register */
     OS_CPU_SR     cpu_sr = 0;
 #endif
@@ -764,27 +764,27 @@ XXXXXS  OSFlagPendGetFlagsRdy (void)
 *
 * Arguments  : pgrp          is a pointer to the desired event flag group.
 *
-*              flags         If 'opt' (see below) is XXXXX_SET, each bit that is set in 'flags' will
+*              flags         If 'opt' (see below) is OS_FLAG_SET, each bit that is set in 'flags' will
 *                            set the corresponding bit in the event flag group.  e.g. to set bits 0, 4
 *                            and 5 you would set 'flags' to:
 *
 *                                0x31     (note, bit 0 is least significant bit)
 *
-*                            If 'opt' (see below) is XXXXX_CLR, each bit that is set in 'flags' will
+*                            If 'opt' (see below) is OS_FLAG_CLR, each bit that is set in 'flags' will
 *                            CLEAR the corresponding bit in the event flag group.  e.g. to clear bits 0,
 *                            4 and 5 you would specify 'flags' as:
 *
 *                                0x31     (note, bit 0 is least significant bit)
 *
 *              opt           indicates whether the flags will be:
-*                                set     (XXXXX_SET) or
-*                                cleared (XXXXX_CLR)
+*                                set     (OS_FLAG_SET) or
+*                                cleared (OS_FLAG_CLR)
 *
 *              perr          is a pointer to an error code and can be:
-*                            TEST_GIT_OS_ERR_NONE                The call was successfull
-*                            TEST_GIT_OS_ERR_FLAG_INVALID_PGRP   You passed a NULL pointer
-*                            TEST_GIT_OS_ERR_EVENT_TYPE          You are not pointing to an event flag group
-*                            TEST_GIT_OS_ERR_FLAG_INVALID_OPT    You specified an invalid option
+*                            OS_ERR_NONE                The call was successfull
+*                            OS_ERR_FLAG_INVALID_PGRP   You passed a NULL pointer
+*                            OS_ERR_EVENT_TYPE          You are not pointing to an event flag group
+*                            OS_ERR_FLAG_INVALID_OPT    You specified an invalid option
 *
 * Returns    : the new value of the event flags bits that are still set.
 *
@@ -796,12 +796,12 @@ XXXXXS  OSFlagPendGetFlagsRdy (void)
 *                 the event flag group.
 *********************************************************************************************************
 */
-XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
+OS_FLAGS  OSFlagPost (OS_FLAG_GRP *pgrp, OS_FLAGS flags, INT8U opt, INT8U *perr)
 {
-    XXXXX_NODE *pnode;
+    OS_FLAG_NODE *pnode;
     BOOLEAN       sched;
-    XXXXXS      flags_cur;
-    XXXXXS      flags_rdy;
+    OS_FLAGS      flags_cur;
+    OS_FLAGS      flags_rdy;
     BOOLEAN       rdy;
 #if OS_CRITICAL_METHOD == 3                          /* Allocate storage for CPU status register       */
     OS_CPU_SR     cpu_sr = 0;
@@ -811,72 +811,72 @@ XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
 
 #if OS_ARG_CHK_EN > 0
     if (perr == (INT8U *)0) {                        /* Validate 'perr'                                */
-        return ((XXXXXS)0);
+        return ((OS_FLAGS)0);
     }
-    if (pgrp == (XXXXX_GRP *)0) {                  /* Validate 'pgrp'                                */
-        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
-        return ((XXXXXS)0);
+    if (pgrp == (OS_FLAG_GRP *)0) {                  /* Validate 'pgrp'                                */
+        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        return ((OS_FLAGS)0);
     }
 #endif
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) {    /* Make sure we are pointing to an event flag grp */
-        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
-        return ((XXXXXS)0);
+        *perr = OS_ERR_EVENT_TYPE;
+        return ((OS_FLAGS)0);
     }
 /*$PAGE*/
     OS_ENTER_CRITICAL();
     switch (opt) {
-        case XXXXX_CLR:
+        case OS_FLAG_CLR:
              pgrp->OSFlagFlags &= ~flags;            /* Clear the flags specified in the group         */
              break;
 
-        case XXXXX_SET:
+        case OS_FLAG_SET:
              pgrp->OSFlagFlags |=  flags;            /* Set   the flags specified in the group         */
              break;
 
         default:
              OS_EXIT_CRITICAL();                     /* INVALID option                                 */
-             *perr = TEST_GIT_OS_ERR_FLAG_INVALID_OPT;
-             return ((XXXXXS)0);
+             *perr = OS_ERR_FLAG_INVALID_OPT;
+             return ((OS_FLAGS)0);
     }
     sched = OS_FALSE;                                /* Indicate that we don't need rescheduling       */
-    pnode = (XXXXX_NODE *)pgrp->OSFlagWaitList;
-    while (pnode != (XXXXX_NODE *)0) {             /* Go through all tasks waiting on event flag(s)  */
+    pnode = (OS_FLAG_NODE *)pgrp->OSFlagWaitList;
+    while (pnode != (OS_FLAG_NODE *)0) {             /* Go through all tasks waiting on event flag(s)  */
         switch (pnode->OSFlagNodeWaitType) {
-            case XXXXX_WAIT_SET_ALL:               /* See if all req. flags are set for current node */
-                 flags_rdy = (XXXXXS)(pgrp->OSFlagFlags & pnode->OSFlagNodeFlags);
+            case OS_FLAG_WAIT_SET_ALL:               /* See if all req. flags are set for current node */
+                 flags_rdy = (OS_FLAGS)(pgrp->OSFlagFlags & pnode->OSFlagNodeFlags);
                  if (flags_rdy == pnode->OSFlagNodeFlags) {
-                     rdy = XXXXXTaskRdy(pnode, flags_rdy);  /* Make task RTR, event(s) Rx'd          */
+                     rdy = OS_FLAGTaskRdy(pnode, flags_rdy);  /* Make task RTR, event(s) Rx'd          */
                      if (rdy == OS_TRUE) {
                          sched = OS_TRUE;                     /* When done we will reschedule          */
                      }
                  }
                  break;
 
-            case XXXXX_WAIT_SET_ANY:               /* See if any flag set                            */
-                 flags_rdy = (XXXXXS)(pgrp->OSFlagFlags & pnode->OSFlagNodeFlags);
-                 if (flags_rdy != (XXXXXS)0) {
-                     rdy = XXXXXTaskRdy(pnode, flags_rdy);  /* Make task RTR, event(s) Rx'd          */
+            case OS_FLAG_WAIT_SET_ANY:               /* See if any flag set                            */
+                 flags_rdy = (OS_FLAGS)(pgrp->OSFlagFlags & pnode->OSFlagNodeFlags);
+                 if (flags_rdy != (OS_FLAGS)0) {
+                     rdy = OS_FLAGTaskRdy(pnode, flags_rdy);  /* Make task RTR, event(s) Rx'd          */
                      if (rdy == OS_TRUE) {
                          sched = OS_TRUE;                     /* When done we will reschedule          */
                      }
                  }
                  break;
 
-#if XXXXX_WAIT_CLR_EN > 0
-            case XXXXX_WAIT_CLR_ALL:               /* See if all req. flags are set for current node */
-                 flags_rdy = (XXXXXS)(~pgrp->OSFlagFlags & pnode->OSFlagNodeFlags);
+#if OS_FLAG_WAIT_CLR_EN > 0
+            case OS_FLAG_WAIT_CLR_ALL:               /* See if all req. flags are set for current node */
+                 flags_rdy = (OS_FLAGS)(~pgrp->OSFlagFlags & pnode->OSFlagNodeFlags);
                  if (flags_rdy == pnode->OSFlagNodeFlags) {
-                     rdy = XXXXXTaskRdy(pnode, flags_rdy);  /* Make task RTR, event(s) Rx'd          */
+                     rdy = OS_FLAGTaskRdy(pnode, flags_rdy);  /* Make task RTR, event(s) Rx'd          */
                      if (rdy == OS_TRUE) {
                          sched = OS_TRUE;                     /* When done we will reschedule          */
                      }
                  }
                  break;
 
-            case XXXXX_WAIT_CLR_ANY:               /* See if any flag set                            */
-                 flags_rdy = (XXXXXS)(~pgrp->OSFlagFlags & pnode->OSFlagNodeFlags);
-                 if (flags_rdy != (XXXXXS)0) {
-                     rdy = XXXXXTaskRdy(pnode, flags_rdy);  /* Make task RTR, event(s) Rx'd          */
+            case OS_FLAG_WAIT_CLR_ANY:               /* See if any flag set                            */
+                 flags_rdy = (OS_FLAGS)(~pgrp->OSFlagFlags & pnode->OSFlagNodeFlags);
+                 if (flags_rdy != (OS_FLAGS)0) {
+                     rdy = OS_FLAGTaskRdy(pnode, flags_rdy);  /* Make task RTR, event(s) Rx'd          */
                      if (rdy == OS_TRUE) {
                          sched = OS_TRUE;                     /* When done we will reschedule          */
                      }
@@ -885,10 +885,10 @@ XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
 #endif
             default:
                  OS_EXIT_CRITICAL();
-                 *perr = TEST_GIT_OS_ERR_FLAG_WAIT_TYPE;
-                 return ((XXXXXS)0);
+                 *perr = OS_ERR_FLAG_WAIT_TYPE;
+                 return ((OS_FLAGS)0);
         }
-        pnode = (XXXXX_NODE *)pnode->OSFlagNodeNext; /* Point to next task waiting for event flag(s) */
+        pnode = (OS_FLAG_NODE *)pnode->OSFlagNodeNext; /* Point to next task waiting for event flag(s) */
     }
     OS_EXIT_CRITICAL();
     if (sched == OS_TRUE) {
@@ -897,7 +897,7 @@ XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
     OS_ENTER_CRITICAL();
     flags_cur = pgrp->OSFlagFlags;
     OS_EXIT_CRITICAL();
-    *perr     = TEST_GIT_OS_ERR_NONE;
+    *perr     = OS_ERR_NONE;
     return (flags_cur);
 }
 /*$PAGE*/
@@ -910,9 +910,9 @@ XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
 * Arguments  : pgrp         is a pointer to the desired event flag group.
 *
 *              perr          is a pointer to an error code returned to the called:
-*                            TEST_GIT_OS_ERR_NONE                The call was successfull
-*                            TEST_GIT_OS_ERR_FLAG_INVALID_PGRP   You passed a NULL pointer
-*                            TEST_GIT_OS_ERR_EVENT_TYPE          You are not pointing to an event flag group
+*                            OS_ERR_NONE                The call was successfull
+*                            OS_ERR_FLAG_INVALID_PGRP   You passed a NULL pointer
+*                            OS_ERR_EVENT_TYPE          You are not pointing to an event flag group
 *
 * Returns    : The current value of the event flag group.
 *
@@ -920,10 +920,10 @@ XXXXXS  OSFlagPost (XXXXX_GRP *pgrp, XXXXXS flags, INT8U opt, INT8U *perr)
 *********************************************************************************************************
 */
 
-#if XXXXX_QUERY_EN > 0
-XXXXXS  OSFlagQuery (XXXXX_GRP *pgrp, INT8U *perr)
+#if OS_FLAG_QUERY_EN > 0
+OS_FLAGS  OSFlagQuery (OS_FLAG_GRP *pgrp, INT8U *perr)
 {
-    XXXXXS   flags;
+    OS_FLAGS   flags;
 #if OS_CRITICAL_METHOD == 3                       /* Allocate storage for CPU status register          */
     OS_CPU_SR  cpu_sr = 0;
 #endif
@@ -932,21 +932,21 @@ XXXXXS  OSFlagQuery (XXXXX_GRP *pgrp, INT8U *perr)
 
 #if OS_ARG_CHK_EN > 0
     if (perr == (INT8U *)0) {                     /* Validate 'perr'                                   */
-        return ((XXXXXS)0);
+        return ((OS_FLAGS)0);
     }
-    if (pgrp == (XXXXX_GRP *)0) {               /* Validate 'pgrp'                                   */
-        *perr = TEST_GIT_OS_ERR_FLAG_INVALID_PGRP;
-        return ((XXXXXS)0);
+    if (pgrp == (OS_FLAG_GRP *)0) {               /* Validate 'pgrp'                                   */
+        *perr = OS_ERR_FLAG_INVALID_PGRP;
+        return ((OS_FLAGS)0);
     }
 #endif
     if (pgrp->OSFlagType != OS_EVENT_TYPE_FLAG) { /* Validate event block type                         */
-        *perr = TEST_GIT_OS_ERR_EVENT_TYPE;
-        return ((XXXXXS)0);
+        *perr = OS_ERR_EVENT_TYPE;
+        return ((OS_FLAGS)0);
     }
     OS_ENTER_CRITICAL();
     flags = pgrp->OSFlagFlags;
     OS_EXIT_CRITICAL();
-    *perr = TEST_GIT_OS_ERR_NONE;
+    *perr = OS_ERR_NONE;
     return (flags);                               /* Return the current value of the event flags       */
 }
 #endif
@@ -973,25 +973,25 @@ XXXXXS  OSFlagQuery (XXXXX_GRP *pgrp, INT8U *perr)
 *                            to be set/cleared.
 *                            You can specify the following argument:
 *
-*                            XXXXX_WAIT_CLR_ALL   You will check ALL bits in 'mask' to be clear (0)
-*                            XXXXX_WAIT_CLR_ANY   You will check ANY bit  in 'mask' to be clear (0)
-*                            XXXXX_WAIT_SET_ALL   You will check ALL bits in 'mask' to be set   (1)
-*                            XXXXX_WAIT_SET_ANY   You will check ANY bit  in 'mask' to be set   (1)
+*                            OS_FLAG_WAIT_CLR_ALL   You will check ALL bits in 'mask' to be clear (0)
+*                            OS_FLAG_WAIT_CLR_ANY   You will check ANY bit  in 'mask' to be clear (0)
+*                            OS_FLAG_WAIT_SET_ALL   You will check ALL bits in 'mask' to be set   (1)
+*                            OS_FLAG_WAIT_SET_ANY   You will check ANY bit  in 'mask' to be set   (1)
 *
 *              timeout       is the desired amount of time that the task will wait for the event flag
 *                            bit(s) to be set.
 *
 * Returns    : none
 *
-* Called by  : OSFlagPend()  XXXXX.C
+* Called by  : OSFlagPend()  OS_FLAG.C
 *
 * Note(s)    : This function is INTERNAL to uC/OS-II and your application should not call it.
 *********************************************************************************************************
 */
 
-static  void  XXXXXBlock (XXXXX_GRP *pgrp, XXXXX_NODE *pnode, XXXXXS flags, INT8U wait_type, INT16U timeout)
+static  void  OS_FLAGBlock (OS_FLAG_GRP *pgrp, OS_FLAG_NODE *pnode, OS_FLAGS flags, INT8U wait_type, INT16U timeout)
 {
-    XXXXX_NODE  *pnode_next;
+    OS_FLAG_NODE  *pnode_next;
     INT8U          y;
 
 
@@ -1007,7 +1007,7 @@ static  void  XXXXXBlock (XXXXX_GRP *pgrp, XXXXX_NODE *pnode, XXXXXS flags, INT8
     pnode->OSFlagNodeNext     = pgrp->OSFlagWaitList; /* Add node at beginning of event flag wait list */
     pnode->OSFlagNodePrev     = (void *)0;
     pnode->OSFlagNodeFlagGrp  = (void *)pgrp;         /* Link to Event Flag Group                      */
-    pnode_next                = (XXXXX_NODE *)pgrp->OSFlagWaitList;
+    pnode_next                = (OS_FLAG_NODE *)pgrp->OSFlagWaitList;
     if (pnode_next != (void *)0) {                    /* Is this the first NODE to insert?             */
         pnode_next->OSFlagNodePrev = pnode;           /* No, link in doubly linked list                */
     }
@@ -1036,14 +1036,14 @@ static  void  XXXXXBlock (XXXXX_GRP *pgrp, XXXXX_NODE *pnode, XXXXXS flags, INT8
 *********************************************************************************************************
 */
 
-void  XXXXXInit (void)
+void  OS_FLAGInit (void)
 {
 #if OS_MAX_FLAGS == 1
-    OSFlagFreeList                 = (XXXXX_GRP *)&OSFlagTbl[0];  /* Only ONE event flag group!      */
+    OSFlagFreeList                 = (OS_FLAG_GRP *)&OSFlagTbl[0];  /* Only ONE event flag group!      */
     OSFlagFreeList->OSFlagType     = OS_EVENT_TYPE_UNUSED;
     OSFlagFreeList->OSFlagWaitList = (void *)0;
-    OSFlagFreeList->OSFlagFlags    = (XXXXXS)0;
-#if XXXXX_NAME_SIZE > 1
+    OSFlagFreeList->OSFlagFlags    = (OS_FLAGS)0;
+#if OS_FLAG_NAME_SIZE > 1
     OSFlagFreeList->OSFlagName[0]  = '?';
     OSFlagFreeList->OSFlagName[1]  = OS_ASCII_NUL;
 #endif
@@ -1051,8 +1051,8 @@ void  XXXXXInit (void)
 
 #if OS_MAX_FLAGS >= 2
     INT16U       i;
-    XXXXX_GRP *pgrp1;
-    XXXXX_GRP *pgrp2;
+    OS_FLAG_GRP *pgrp1;
+    OS_FLAG_GRP *pgrp2;
 
 
     OS_MemClr((INT8U *)&OSFlagTbl[0], sizeof(OSFlagTbl));           /* Clear the flag group table      */
@@ -1061,7 +1061,7 @@ void  XXXXXInit (void)
     for (i = 0; i < (OS_MAX_FLAGS - 1); i++) {                      /* Init. list of free EVENT FLAGS  */
         pgrp1->OSFlagType     = OS_EVENT_TYPE_UNUSED;
         pgrp1->OSFlagWaitList = (void *)pgrp2;
-#if XXXXX_NAME_SIZE > 1
+#if OS_FLAG_NAME_SIZE > 1
         pgrp1->OSFlagName[0]  = '?';                                /* Unknown name                    */
         pgrp1->OSFlagName[1]  = OS_ASCII_NUL;
 #endif
@@ -1070,7 +1070,7 @@ void  XXXXXInit (void)
     }
     pgrp1->OSFlagType     = OS_EVENT_TYPE_UNUSED;
     pgrp1->OSFlagWaitList = (void *)0;
-#if XXXXX_NAME_SIZE > 1
+#if OS_FLAG_NAME_SIZE > 1
     pgrp1->OSFlagName[0]  = '?';                                    /* Unknown name                    */
     pgrp1->OSFlagName[1]  = OS_ASCII_NUL;
 #endif
@@ -1095,14 +1095,14 @@ void  XXXXXInit (void)
 * Returns    : OS_TRUE       If the task has been placed in the ready list and thus needs scheduling
 *              OS_FALSE      The task is still not ready to run and thus scheduling is not necessary
 *
-* Called by  : OSFlagsPost() XXXXX.C
+* Called by  : OSFlagsPost() OS_FLAG.C
 *
 * Note(s)    : 1) This function assumes that interrupts are disabled.
 *              2) This function is INTERNAL to uC/OS-II and your application should not call it.
 *********************************************************************************************************
 */
 
-static  BOOLEAN  XXXXXTaskRdy (XXXXX_NODE *pnode, XXXXXS flags_rdy)
+static  BOOLEAN  OS_FLAGTaskRdy (OS_FLAG_NODE *pnode, OS_FLAGS flags_rdy)
 {
     OS_TCB   *ptcb;
     BOOLEAN   sched;
@@ -1120,7 +1120,7 @@ static  BOOLEAN  XXXXXTaskRdy (XXXXX_NODE *pnode, XXXXXS flags_rdy)
     } else {
         sched                   = OS_FALSE;
     }
-    XXXXXUnlink(pnode);
+    OS_FLAGUnlink(pnode);
     return (sched);
 }
 
@@ -1137,8 +1137,8 @@ static  BOOLEAN  XXXXXTaskRdy (XXXXX_NODE *pnode, XXXXXS flags_rdy)
 *
 * Returns    : none
 *
-* Called by  : XXXXXTaskRdy() XXXXX.C
-*              OSFlagPend()     XXXXX.C
+* Called by  : OS_FLAGTaskRdy() OS_FLAG.C
+*              OSFlagPend()     OS_FLAG.C
 *              OSTaskDel()      OS_TASK.C
 *
 * Note(s)    : 1) This function assumes that interrupts are disabled.
@@ -1146,33 +1146,33 @@ static  BOOLEAN  XXXXXTaskRdy (XXXXX_NODE *pnode, XXXXXS flags_rdy)
 *********************************************************************************************************
 */
 
-void  XXXXXUnlink (XXXXX_NODE *pnode)
+void  OS_FLAGUnlink (OS_FLAG_NODE *pnode)
 {
 #if OS_TASK_DEL_EN > 0
     OS_TCB       *ptcb;
 #endif
-    XXXXX_GRP  *pgrp;
-    XXXXX_NODE *pnode_prev;
-    XXXXX_NODE *pnode_next;
+    OS_FLAG_GRP  *pgrp;
+    OS_FLAG_NODE *pnode_prev;
+    OS_FLAG_NODE *pnode_next;
 
 
-    pnode_prev = (XXXXX_NODE *)pnode->OSFlagNodePrev;
-    pnode_next = (XXXXX_NODE *)pnode->OSFlagNodeNext;
-    if (pnode_prev == (XXXXX_NODE *)0) {                      /* Is it first node in wait list?      */
-        pgrp                 = (XXXXX_GRP *)pnode->OSFlagNodeFlagGrp;
+    pnode_prev = (OS_FLAG_NODE *)pnode->OSFlagNodePrev;
+    pnode_next = (OS_FLAG_NODE *)pnode->OSFlagNodeNext;
+    if (pnode_prev == (OS_FLAG_NODE *)0) {                      /* Is it first node in wait list?      */
+        pgrp                 = (OS_FLAG_GRP *)pnode->OSFlagNodeFlagGrp;
         pgrp->OSFlagWaitList = (void *)pnode_next;              /*      Update list for new 1st node   */
-        if (pnode_next != (XXXXX_NODE *)0) {
-            pnode_next->OSFlagNodePrev = (XXXXX_NODE *)0;     /*      Link new 1st node PREV to NULL */
+        if (pnode_next != (OS_FLAG_NODE *)0) {
+            pnode_next->OSFlagNodePrev = (OS_FLAG_NODE *)0;     /*      Link new 1st node PREV to NULL */
         }
     } else {                                                    /* No,  A node somewhere in the list   */
         pnode_prev->OSFlagNodeNext = pnode_next;                /*      Link around the node to unlink */
-        if (pnode_next != (XXXXX_NODE *)0) {                  /*      Was this the LAST node?        */
+        if (pnode_next != (OS_FLAG_NODE *)0) {                  /*      Was this the LAST node?        */
             pnode_next->OSFlagNodePrev = pnode_prev;            /*      No, Link around current node   */
         }
     }
 #if OS_TASK_DEL_EN > 0
     ptcb                = (OS_TCB *)pnode->OSFlagNodeTCB;
-    ptcb->OSTCBFlagNode = (XXXXX_NODE *)0;
+    ptcb->OSTCBFlagNode = (OS_FLAG_NODE *)0;
 #endif
 }
 #endif
