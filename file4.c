@@ -9,9 +9,7 @@
 *
 * File    : OS_FLAG.C
 * By      : Jean J. Labrosse
-* Version : V2.85
-*
-* LICENSING TERMS:
+
 * ---------------
 *   uC/OS-II is provided in source form for FREE evaluation, for educational use or for peaceful research.  
 * If you plan on using  uC/OS-II  in a commercial product you need to contact Micriµm to properly license 
