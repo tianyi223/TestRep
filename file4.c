@@ -5,10 +5,7 @@
 *                                         EVENT FLAG  MANAGEMENT
 *
 *                          (c) Copyright 2001-2007, Jean J. Labrosse, Weston, FL
-*                                           All Rights Reserved
-*
-* File    : OS_FLAG.C
-* By      : Jean J. Labrosse
+
 
 * ---------------
 *   uC/OS-II is provided in source form for FREE evaluation, for educational use or for peaceful research.  
