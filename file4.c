@@ -19,17 +19,7 @@
 #ifndef  OS_MASTER_FILE
 #include <ucos_ii.h>
 #endif
-
-#if (OS_FLAG_EN > 0) && (OS_MAX_FLAGS > 0)
-/*
-*********************************************************************************************************
-*                                            LOCAL PROTOTYPES
-*********************************************************************************************************
-*/
-
-static  void     OS_FLAGBlock(OS_FLAG_GRP *pgrp, OS_FLAG_NODE *pnode, OS_FLAGS flags, INT8U wait_type, INT16U timeout);
-static  BOOLEAN  OS_FLAGTaskRdy(OS_FLAG_NODE *pnode, OS_FLAGS flags_rdy);
-
+jhgfg
 // _TEST_GIT_
 
 /*$PAGE*/
