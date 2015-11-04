@@ -726,9 +726,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP *pgrp, OS_FLAGS flags, INT8U wait_type, INT16U
 
 OS_FLAGS  OSFlagPendGetFlagsRdy (void)
 {
-    OS_FLAGS      flags;
-#if OS_CRITICAL_METHOD == 3                                /* Allocate storage for CPU status register */
-    OS_CPU_SR     cpu_sr = 0;
+
 #endif
 
 
